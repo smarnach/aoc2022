@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# Start a new day
+
+set -eu
+
+day="${1:-$(date +%d)}"
+day="${day#0}"
+day_padded="$(printf %02d "$day")"
+year="${2:-$(date -d '11 months ago' +%Y)}"
+echo "Year $year, day $day"
+
+cd "$(dirname -- "$0")"
+
+# Create Rust file
+src_file="src/bin/day$day_padded.rs"
+if ! [ -e "$src_file" ]; then
+    echo "Writing $src_file..."
+    crate="$(cargo read-manifest | jq -r .name)"
+    cat >> "$src_file" << EOF
+use anyhow::Result;
+use $crate::read_input;
+
+fn main() -> Result<()> {
+    let _ = read_input!()?;
+    Ok(())
+}
+EOF
+fi
+
+# Open puzzle in browser
+firefox -P release "https://adventofcode.com/$year/day/$day"
+
+# Download input
+input_file="inputs/day$day_padded"
+if ! [ -e "$input_file" ]; then
+    aoc --year $year --day "$day" --file "$input_file" download
+fi
