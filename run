@@ -1,0 +1,20 @@
+#!/bin/bash
+# Run the last modified binary
+
+set -eu
+
+cd "$(dirname -- "$0")"
+src_file="$(ls src/bin/*.rs | head -n 1)"
+bin_name="$(basename -s .rs "$src_file")"
+
+# We use cargo build so we get more accurate timings.
+cargo build --bin "$bin_name" "$@"
+# Unfortunately, we have to guess the binary name.
+target=debug
+for arg in "$@"; do
+    if [ "$arg" = "--release" ]; then
+        target=release
+    fi
+done
+set -x
+time "target/$target/$bin_name"
