@@ -24,28 +24,36 @@ pub fn stdin_isatty() -> bool {
     unsafe { libc::isatty(libc::STDIN_FILENO) != 0 }
 }
 
-pub fn parse_line<'a, T>(line: &'a str, sep: char) -> impl Iterator<Item = Result<T>> + 'a
+pub fn parse_split<'a, T>(input: &'a str, sep: char) -> impl Iterator<Item = Result<T>> + 'a
 where
     T: FromStr + 'a,
     Error: From<<T as FromStr>::Err>,
 {
-    line.split(sep).map(|s| Ok(s.trim().parse()?))
+    input.trim().split(sep).map(|s| Ok(s.trim().parse()?))
 }
 
-pub fn parse_line_comma<'a, T>(line: &'a str) -> impl Iterator<Item = Result<T>> + 'a
+pub fn parse_split_comma<'a, T>(line: &'a str) -> impl Iterator<Item = Result<T>> + 'a
 where
     T: FromStr + 'a,
     Error: From<<T as FromStr>::Err>,
 {
-    parse_line(line, ',')
+    parse_split(line, ',')
 }
 
-pub fn parse_line_space<'a, T>(line: &'a str) -> impl Iterator<Item = Result<T>> + 'a
+pub fn parse_split_space<'a, T>(line: &'a str) -> impl Iterator<Item = Result<T>> + 'a
 where
     T: FromStr + 'a,
     Error: From<<T as FromStr>::Err>,
 {
-    parse_line(line, ' ')
+    parse_split(line, ' ')
+}
+
+pub fn parse_lines<'a, T>(line: &'a str) -> impl Iterator<Item = Result<T>> + 'a
+where
+    T: FromStr + 'a,
+    Error: From<<T as FromStr>::Err>,
+{
+    parse_split(line, '\n')
 }
 
 pub struct Grid<T> {
