@@ -22,7 +22,7 @@ use anyhow::Result;
 use $crate::read_input;
 
 fn main() -> Result<()> {
-    let _ = read_input!()?;
+    let input = read_input!()?;
     Ok(())
 }
 EOF
