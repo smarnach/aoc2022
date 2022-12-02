@@ -4,7 +4,7 @@
 set -eu
 
 cd "$(dirname -- "$0")"
-src_file="$(ls src/bin/*.rs | head -n 1)"
+src_file="$(ls -t src/bin/*.rs | head -n 1)"
 bin_name="$(basename -s .rs "$src_file")"
 
 # We use cargo build so we get more accurate timings.
