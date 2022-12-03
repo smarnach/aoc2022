@@ -1,49 +1,43 @@
-use std::collections::HashSet;
-
 use anyhow::{Error, Result};
 use aoc2022::read_input;
+use std::ops::BitAnd;
 
 fn main() -> Result<()> {
-    let input = read_input!()?;
-    let rucksacks: Vec<&str> = input.lines().collect();
-    let common_item_priority = rucksacks
-        .iter()
-        .flat_map(common_item)
+    let priorities = read_input!()?
+        .trim()
+        .chars()
         .map(priority)
-        .sum::<Result<u32>>()?;
-    println!("{}", common_item_priority);
-    let badge_priority = rucksacks
-        .chunks(3)
-        .flat_map(badge)
-        .map(priority)
-        .sum::<Result<u32>>()?;
-    println!("{}", badge_priority);
+        .collect::<Result<Vec<u8>>>()?;
+    let rucksacks: Vec<&[u8]> = priorities.split(|&i| i == NEWLINE).collect();
+    println!("{}", rucksacks.iter().map(common_item).sum::<u32>());
+    println!("{}", rucksacks.chunks(3).map(badge).sum::<u32>());
     Ok(())
 }
 
-fn priority(item: char) -> Result<u32> {
+const NEWLINE: u8 = u8::MAX;
+
+fn priority(item: char) -> Result<u8> {
     match item {
-        'a'..='z' => Ok(item as u32 - 'a' as u32 + 1),
-        'A'..='Z' => Ok(item as u32 - 'A' as u32 + 27),
+        'a'..='z' => Ok(item as u8 - b'a' + 1),
+        'A'..='Z' => Ok(item as u8 - b'A' + 27),
+        '\n' => Ok(NEWLINE),
         _ => Err(Error::msg("invalid item")),
     }
 }
 
-fn common_item(rucksack: &&str) -> Option<char> {
-    let mut contents = rucksack.chars();
-    let first = HashSet::<_>::from_iter(contents.by_ref().take(rucksack.len() / 2));
-    contents.find(|item| first.contains(item))
+fn bitset(rucksack: &[u8]) -> u64 {
+    rucksack.iter().fold(0, |acc, &i| acc | (1 << i))
 }
 
-fn badge(rucksacks: &[&str]) -> Option<char> {
+fn common_item(rucksack: &&[u8]) -> u32 {
+    let (first, second) = rucksack.split_at(rucksack.len() / 2);
+    (bitset(first) & bitset(second)).trailing_zeros()
+}
+
+fn badge(rucksacks: &[&[u8]]) -> u32 {
     rucksacks
         .iter()
-        .map(|r| HashSet::<_>::from_iter(r.chars()))
-        .fold(None, |acc, items| match acc {
-            None => Some(items),
-            Some(acc) => Some(&acc & &items),
-        })
-        .into_iter()
-        .flatten()
-        .next()
+        .map(|r| bitset(r))
+        .fold(u64::MAX, BitAnd::bitand)
+        .trailing_zeros()
 }
