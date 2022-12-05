@@ -1,11 +1,11 @@
-#![feature(let_chains)]
+#![feature(let_chains, map_many_mut)]
 
 use anyhow::{Context, Error, Result};
 use aoc2022::{parse_lines, read_input};
 use lazy_static::lazy_static;
 use regex::bytes::Regex;
 use std::{
-    collections::BTreeMap,
+    collections::HashMap,
     str::{from_utf8, FromStr},
 };
 
@@ -20,7 +20,8 @@ fn main() -> Result<()> {
 
 #[derive(Clone)]
 struct Stacks {
-    crates: BTreeMap<u8, Vec<u8>>,
+    labels: Vec<u8>,
+    crates: HashMap<u8, Vec<u8>>,
 }
 
 #[derive(Clone, Copy)]
@@ -32,22 +33,18 @@ enum CraneModel {
 use CraneModel::*;
 
 impl Stacks {
-    fn get_mut(&mut self, name: u8) -> Result<&mut Vec<u8>> {
-        self.crates.get_mut(&name).context("invalid stack name")
-    }
-
     fn apply(&mut self, step: &Step, model: CraneModel) -> Result<()> {
-        for _ in 0..step.count {
-            let c = self
-                .get_mut(step.from)?
-                .pop()
-                .context("trying to move from empty stack")?;
-            self.get_mut(step.to)?.push(c);
-        }
-        if let CrateMover9001 = model {
-            let to = self.get_mut(step.to)?;
-            let i = to.len() - step.count;
-            to[i..].reverse();
+        let [from, to] = self
+            .crates
+            .get_many_mut([&step.from, &step.to])
+            .context("invalid source or destination stack")?;
+        let i = from
+            .len()
+            .checked_sub(step.count)
+            .context("not enough crates on source stack")?;
+        match model {
+            CrateMover9000 => to.extend(from.drain(i..).rev()),
+            CrateMover9001 => to.extend(from.drain(i..)),
         }
         Ok(())
     }
@@ -57,9 +54,9 @@ impl Stacks {
             self.apply(step, model)?;
         }
         Ok(self
-            .crates
-            .values()
-            .flat_map(|s| s.last().cloned())
+            .labels
+            .iter()
+            .flat_map(|label| self.crates[label].last().cloned())
             .collect())
     }
 }
@@ -74,18 +71,19 @@ impl FromStr for Stacks {
             .context("empty stack spec")?
             .bytes()
             .enumerate()
-            .filter(|&(_, name)| name != b' ')
+            .filter(|&(_, label)| label != b' ')
             .collect();
-        let mut crates: BTreeMap<_, _> = stacks.iter().map(|&(_, name)| (name, vec![])).collect();
+        let mut crates: HashMap<_, _> = stacks.iter().map(|&(_, label)| (label, vec![])).collect();
         for line in lines {
             let line = line.as_bytes();
-            for &(i, name) in &stacks {
+            for &(i, label) in &stacks {
                 if let Some(&c) = line.get(i) && c != b' ' {
-                    crates.get_mut(&name).unwrap().push(c);
+                    crates.get_mut(&label).unwrap().push(c);
                 }
             }
         }
-        Ok(Self { crates })
+        let labels = stacks.iter().map(|&(_, label)| label).collect();
+        Ok(Self { labels, crates })
     }
 }
 
