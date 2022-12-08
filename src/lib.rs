@@ -1,7 +1,8 @@
 use anyhow::{Context, Error, Result};
 use std::{
-    ops::{Index, IndexMut},
-    str::FromStr, path::PathBuf,
+    ops::{Deref, Index, IndexMut},
+    path::PathBuf,
+    str::FromStr,
 };
 
 pub fn read_input(bin_name: &str) -> std::io::Result<String> {
@@ -56,10 +57,31 @@ where
     parse_split(line, '\n')
 }
 
+#[derive(Clone, Debug)]
 pub struct Grid<T> {
     data: Vec<T>,
     width: usize,
     height: usize,
+}
+
+impl<T> Deref for Grid<T> {
+    type Target = Vec<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<T: Default> Grid<T> {
+    pub fn new(width: usize, height: usize) -> Self {
+        let mut data = vec![];
+        data.resize_with(width * height, T::default);
+        Self {
+            data,
+            width,
+            height,
+        }
+    }
 }
 
 impl<T> Grid<T> {
@@ -102,11 +124,11 @@ impl<T> Grid<T> {
         (x >= self.width || y >= self.height).then_some(self.width * x + y)
     }
 
-    pub fn get(&self, x: usize, y: usize) -> Option<&T> {
+    pub fn get_xy(&self, x: usize, y: usize) -> Option<&T> {
         self.index(x, y).map(|i| &self.data[i])
     }
 
-    pub fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut T> {
+    pub fn get_xy_mut(&mut self, x: usize, y: usize) -> Option<&mut T> {
         self.index(x, y).map(|i| &mut self.data[i])
     }
 
