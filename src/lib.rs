@@ -1,6 +1,6 @@
 use anyhow::{Context, Error, Result};
 use std::{
-    ops::{Deref, Index, IndexMut},
+    ops::{Deref, DerefMut},
     path::PathBuf,
     str::FromStr,
 };
@@ -49,12 +49,12 @@ where
     parse_split(line, ' ')
 }
 
-pub fn parse_lines<'a, T>(line: &'a str) -> impl Iterator<Item = Result<T>> + 'a
+pub fn parse_lines<'a, T>(block: &'a str) -> impl Iterator<Item = Result<T>> + 'a
 where
     T: FromStr + 'a,
     Error: From<<T as FromStr>::Err>,
 {
-    parse_split(line, '\n')
+    parse_split(block, '\n')
 }
 
 #[derive(Clone, Debug)]
@@ -65,10 +65,16 @@ pub struct Grid<T> {
 }
 
 impl<T> Deref for Grid<T> {
-    type Target = Vec<T>;
+    type Target = [T];
 
     fn deref(&self) -> &Self::Target {
         &self.data
+    }
+}
+
+impl<T> DerefMut for Grid<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
     }
 }
 
@@ -124,6 +130,10 @@ impl<T> Grid<T> {
         (x >= self.width || y >= self.height).then_some(self.width * x + y)
     }
 
+    pub fn coords(&self, index: usize) -> (usize, usize) {
+        (index % self.width, index / self.width)
+    }
+
     pub fn get_xy(&self, x: usize, y: usize) -> Option<&T> {
         self.index(x, y).map(|i| &self.data[i])
     }
@@ -140,19 +150,5 @@ impl<T> Grid<T> {
             3 if i + self.width < self.data.len() => Some(i + self.width),
             _ => None,
         })
-    }
-}
-
-impl<T> Index<usize> for Grid<T> {
-    type Output = T;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.data[index]
-    }
-}
-
-impl<T> IndexMut<usize> for Grid<T> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.data[index]
     }
 }
