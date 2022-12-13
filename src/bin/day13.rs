@@ -57,29 +57,28 @@ impl FromStr for Packet {
 
     fn from_str(line: &str) -> Result<Self, Self::Err> {
         use ParserState::*;
-        let mut stack = vec![vec![]];
+        let mut stack = vec![];
+        let mut current = vec![];
         let mut state = StartItem;
         for token in Tokens::new(line) {
             match (state, token) {
-                (StartItem, "[") => stack.push(vec![]),
+                (StartItem, "[") => stack.push(std::mem::take(&mut current)),
                 (_, "]") => {
-                    let list = Packet::List(stack.pop().unwrap());
-                    stack.last_mut().context("unexpected ]")?.push(list);
+                    let mut outer = stack.pop().context("unexpected ]")?;
+                    outer.push(Packet::List(current));
+                    current = outer;
                     state = Finished;
                 }
                 (StartItem, _) => {
-                    let packet = Packet::Int(token.parse()?);
-                    stack.last_mut().unwrap().push(packet);
+                    current.push(Packet::Int(token.parse()?));
                     state = Finished;
                 }
                 (Finished, ",") => state = StartItem,
                 _ => return Err(Error::msg("unexpected token")),
             }
         }
-        if stack.len() == 1 && stack.first().unwrap().len() == 1 {
-            let mut v = stack.pop().unwrap();
-            let item = v.pop().unwrap();
-            Ok(item)
+        if stack.is_empty() && current.len() == 1 {
+            Ok(current.pop().unwrap())
         } else {
             Err(Error::msg("parse error"))
         }
