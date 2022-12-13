@@ -60,7 +60,7 @@ impl FromStr for Packet {
         let mut stack = vec![];
         let mut current = vec![];
         let mut state = StartItem;
-        for token in Tokens::new(line) {
+        for token in tokens(line) {
             match (state, token) {
                 (StartItem, "[") => stack.push(std::mem::take(&mut current)),
                 (_, "]") => {
@@ -91,27 +91,15 @@ enum ParserState {
     Finished,
 }
 
-struct Tokens<'a> {
-    line: &'a str,
-}
-
-impl<'a> Tokens<'a> {
-    fn new(line: &'a str) -> Self {
-        Self { line }
+fn tokens(mut line: &str) -> impl Iterator<Item = &str> {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"^\d+|,|\[|\]").unwrap();
     }
-}
-
-impl<'a> Iterator for Tokens<'a> {
-    type Item = &'a str;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"^\d+|,|\[|\]").unwrap();
-        }
-        let m = RE.find(self.line)?;
-        self.line = &self.line[m.end()..];
+    std::iter::from_fn(move || {
+        let m = RE.find(line)?;
+        line = &line[m.end()..];
         Some(m.as_str())
-    }
+    })
 }
 
 fn parse_input(input: &str) -> Result<Vec<Packet>> {
