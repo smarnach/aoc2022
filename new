@@ -18,7 +18,9 @@ if ! [ -e "$src_file" ]; then
     echo "Writing $src_file..."
     crate="$(cargo read-manifest | jq -r .name)"
     cat >> "$src_file" << EOF
-use anyhow::Result;
+#![allow(unused)]
+
+use anyhow::{Context, Error, Result};
 use $crate::read_input;
 
 fn main() -> Result<()> {
